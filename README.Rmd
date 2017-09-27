@@ -1,0 +1,98 @@
+---
+title: "STAT 407 - Principal Component Analysis Example"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.align = 'center')
+```
+
+# Women's Heptathalon Data - 1988 Olympics
+
+Example from Chapter 3, Section 10 of textbook
+
+```{r pkgs}
+library(tidyverse)
+library(GGally)
+heptath <- read_csv("heptathalonData.csv")
+heptath$Medal[is.na(heptath$Medal)] <- "none"
+head(heptath)
+```
+
+## Scores or PCAs? 
+
+There are 7 events, and each competitor is assigned points for their performance in each event to get an overall score to win the medals. 
+
+We want to perform PCA to see how closely the scores assigned match the results from the points. 
+
+## Plotting the Data
+
+```{r pairs}
+ggpairs(heptath, 3:10) + ggtitle("Correlations between Heptathalon Events")
+```
+
+
+```{r medals}
+ggplot(data = heptath) + 
+  geom_point(aes(x = javelin, y = score, color = Medal), size = 3) + 
+  scale_color_manual(values = c("#965A38","#D9A441", "grey20","#A8A8A8"), labels = c("bronze", "gold", "none", "silver")) + 
+  theme_classic() + theme(legend.position = 'none') + ggtitle("Overall score by javelin distance")
+```
+
+## Performing PCA
+
+```{r pca, echo = T, fig.align='center'}
+heptath_pca <- prcomp(heptath[,3:9], scale = TRUE) 
+print(heptath_pca)
+```
+
+Percent of variation in data explained by the PCs
+
+```{r pcasd, echo = TRUE}
+perc_var <- heptath_pca$sdev^2 / sum(heptath_pca$sdev^2)
+round(perc_var * 100 , 2)
+```
+
+## PCA Plots 
+
+```{r skree, echo=T, fig.align='center'}
+perc_var <- heptath_pca$sdev^2 / sum(heptath_pca$sdev^2)
+qplot(x = 1:7, y = perc_var, geom = 'line') + theme_classic() + 
+  labs(x = "Principal Component", y = "Proportion of variation accounted for", title = "Scree plot")
+```
+
+## Where are the medal winners? 
+
+```{r pcaplot, echo = FALSE}
+heptath$PC1 <- heptath_pca$x[,1]
+heptath$PC2 <- heptath_pca$x[,2]
+
+ggplot(data = heptath) + 
+  geom_point(aes(x = PC1, y = PC2)) + 
+  theme_classic() + 
+  coord_fixed() + 
+  labs(x = "PC1", y = "PC2", title = "Data projected into the PCA space")
+```
+
+```{r pcaplot2, echo = FALSE}
+ggplot(data = heptath) + 
+  geom_point(aes(x = PC1, y = PC2, color = Medal), size = 3) +
+  scale_color_manual(values = c("#965A38","#D9A441", "grey20","#A8A8A8"), labels = c("bronze", "gold", "none", "silver")) + 
+  theme_classic() + 
+  coord_fixed() + theme(legend.position = 'none') +  
+  labs(x = "PC1", y = "PC2", title = "Data projected into the PCA space") 
+```
+
+## How do PCs compare to Score? 
+
+```{r corpca, echo=TRUE}
+cor(heptath$score, heptath$PC1)
+```
+
+```{r corpca2}
+ggplot(data = heptath) + 
+  geom_point(aes(x = PC1, y = score, color = Medal), size = 3) +
+  scale_color_manual(values = c("#965A38","#D9A441", "grey20","#A8A8A8"), labels = c("bronze", "gold", "none", "silver")) + 
+  theme_classic() + theme(legend.position = 'none') +  
+  labs(x = "PC1", y = "Olympic Score", title = "Olympic Score by PCA") 
+```
